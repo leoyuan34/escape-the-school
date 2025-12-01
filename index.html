@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Vigilant Orbi — Escape School (WORKING BUILD)</title>
+  <style>
+    body { background:#0f1220; color:#e6e6eb; font-family:monospace; display:flex; justify-content:center; padding:20px; }
+    #game { background:#14172b; padding:16px; border-radius:12px; box-shadow:0 0 20px #000; }
+    #hud { margin-bottom:10px; font-size:14px; }
+    #map { white-space:pre; font-size:18px; line-height:1.2; background:#0b0d1a; padding:12px; border-radius:8px; }
+    button { margin:4px; padding:6px 10px; border-radius:6px; border:none; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <h2>Vigilant Orbi — Escape School</h2>
+    <div id="hud"></div>
+    <div id="map"></div>
+    <div>
+      <button onclick="newGame()">New Game</button>
+      <button onclick="save()">Save</button>
+      <button onclick="load()">Load</button>
+    </div>
+    <p>Move with WASD or Arrow Keys. @ = You, $ = Coin, k = Key, D = Door, E = Enemy, ^ = Trap</p>
+  </div>
+
+<script>
+// ========== CORE STATE ==========
+let state;
+
+function freshState(){
+  return {
+    level:1,
+    hp:10,
+    coins:0,
+    hasKey:false,
+    map:[]
+  };
+}
+
+// ========== MAP GENERATOR ==========
+function generateMap(){
+  const base = [
+    "####################",
+    "#@....$......E....D#",
+    "#..####..####..######",
+    "#.....$..^.....$...#",
+    "#..E.....####..E...#",
+    "#..#####......#####k",
+    "####################"
+  ];
+  state.map = base.map(r => r.split(""));
+}
+
+// ========== FIND PLAYER ==========
+function findPlayer(){
+  for(let y=0;y<state.map.length;y++){
+    for(let x=0;x<state.map[y].length;x++){
+      if(state.map[y][x]==='@') return {x,y};
+    }
+  }
+}
+
+// ========== RENDER ==========
+function render(){
+  const hud = document.getElementById('hud');
+  const mapDiv = document.getElementById('map');
+
+  hud.innerText = `Level: ${state.level}  HP: ${state.hp}  Coins: ${state.coins}  Key: ${state.hasKey?'Yes':'No'}`;
+
+  mapDiv.innerText = state.map.map(r=>r.join('')).join("\n");
+}
+
+// ========== MOVEMENT ==========
+function move(dx,dy){
+  const p = findPlayer();
+  const nx = p.x + dx;
+  const ny = p.y + dy;
+
+  const tile = state.map[ny][nx];
+  if(tile === '#') return;
+
+  // Enemy
+  if(tile === 'E'){
+    state.hp -= 2;
+    if(state.hp <= 0){ alert('You died!'); newGame(); return; }
+    state.map[ny][nx] = '.';
+  }
+
+  // Trap
+  if(tile === '^'){
+    state.hp -= 1;
+    if(state.hp <= 0){ alert('You died!'); newGame(); return; }
+  }
+
+  // Coin
+  if(tile === '$'){ state.coins += 1; }
+
+  // Key
+  if(tile === 'k'){ state.hasKey = true; }
+
+  // Door
+  if(tile === 'D'){
+    if(state.hasKey){
+      state.level++;
+      state.hasKey = false;
+      generateMap();
+      render();
+      return;
+    } else {
+      return;
+    }
+  }
+
+  // Move player
+  state.map[p.y][p.x] = '.';
+  state.map[ny][nx] = '@';
+  render();
+}
+
+// ========== INPUT ==========
+document.addEventListener('keydown', e => {
+  if(['w','ArrowUp'].includes(e.key)) move(0,-1);
+  if(['s','ArrowDown'].includes(e.key)) move(0,1);
+  if(['a','ArrowLeft'].includes(e.key)) move(-1,0);
+  if(['d','ArrowRight'].includes(e.key)) move(1,0);
+});
+
+// ========== SAVE / LOAD ==========
+function save(){ localStorage.setItem('vigilantSave', JSON.stringify(state)); alert('Saved!'); }
+function load(){
+  const d = localStorage.getItem('vigilantSave');
+  if(!d){ alert('No save found'); return; }
+  state = JSON.parse(d);
+  render();
+}
+
+// ========== NEW GAME ==========
+function newGame(){
+  state = freshState();
+  generateMap();
+  render();
+}
+
+// ========== START ==========
+newGame();
+</script>
+</body>
+</html>
